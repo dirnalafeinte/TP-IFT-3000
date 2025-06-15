@@ -137,12 +137,25 @@ module Navigation =
         let offset = Ship.getDirectionOffset ship.Facing
         let newCoords = List.map (Ship.addCoords offset) ship.Coords
         
+        // Debug: vérifions chaque coordonnée
+        let results = 
+            List.map (fun coord ->
+                let inBounds = Grid.isInBounds coord dims
+                let occupied = 
+                    match Grid.get coord grid with
+                    | Some(Active(name, _)) -> name <> ship.Name  // Occupé si différent bateau
+                    | _ -> false  // Clear ou None = pas occupé
+                (coord, inBounds, occupied)
+            ) newCoords
+        
         // Pendant le jeu, ignore les périmètres - vérifie seulement les limites et occupations
         List.forall (fun coord ->
             // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
             // 2. Pas occupé par un autre bateau
-            not (isCoordOccupied coord grid)
+            match Grid.get coord grid with
+            | Some(Active(name, _)) -> name = ship.Name  // OK si c'est le même bateau
+            | _ -> true  // Clear ou None = OK
         ) newCoords
 
     let moveForward (ship: Ship) : Ship =
