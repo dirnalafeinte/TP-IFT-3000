@@ -91,11 +91,13 @@ module Ship =
                 let coord = (i, j)
                 let isInBounds = i >= 0 && i < rows && j >= 0 && j < cols
                 let isShipCoord = List.contains coord ship.Coords
-                let isPerimeterEdge = 
-                    i = (minRow - 1) || i = (maxRow + 1) || 
-                    j = (minCol - 1) || j = (maxCol + 1)
+                let isPerimeterCoord = 
+                    (i = (minRow - 1) || i = (maxRow + 1) || 
+                     j = (minCol - 1) || j = (maxCol + 1)) &&
+                    i >= (minRow - 1) && i <= (maxRow + 1) &&
+                    j >= (minCol - 1) && j <= (maxCol + 1)
                 
-                if isInBounds && not isShipCoord && isPerimeterEdge then
+                if isInBounds && not isShipCoord && isPerimeterCoord then
                     generatePerimeterCoords i (j + 1) (coord :: acc)
                 else
                     generatePerimeterCoords i (j + 1) acc

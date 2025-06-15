@@ -29,49 +29,53 @@ module Navigation =
     let isCoordInPerimeter (coord: Coord) (excludeShip: Ship option) (grid: Sector Grid) : bool =
         let dims = Grid.getDimensions grid
         
-        // Trouve tous les bateaux dans la grille (sauf celui exclu)
-        let ships = 
+        // Collecte tous les noms de bateaux uniques (sauf celui exclu)
+        let shipNames = 
             Grid.fold (fun acc shipCoord sector ->
                 match sector with
-                | Active(name, index) when index = 0 -> // Premier segment du bateau
-                    // Reconstruit le bateau depuis la grille
-                    let shipCoords = 
-                        Grid.fold (fun coordAcc coord2 sector2 ->
-                            match sector2 with
-                            | Active(name2, _) when name2 = name -> coord2 :: coordAcc
-                            | _ -> coordAcc
-                        ) [] grid
-                        |> List.sort
-                    
-                    if List.length shipCoords > 0 then
-                        // Trouve le centre et la direction du bateau
-                        let center = List.item (Ship.getCenterIndex (List.length shipCoords)) shipCoords
-                        let direction = 
-                            if List.length shipCoords > 1 then
-                                let first = List.head shipCoords
-                                let second = List.item 1 shipCoords
-                                let (di, dj) = Ship.addCoords second (Ship.multiplyCoord first (-1))
-                                if di = 0 && dj = 1 then East
-                                elif di = 0 && dj = -1 then West
-                                elif di = 1 && dj = 0 then South
-                                else North
-                            else North
-                        
-                        let ship = { Coords = shipCoords; Center = center; Facing = direction; Name = name }
-                        
-                        // Vérifie si on doit exclure ce bateau
+                | Active(name, _) -> 
+                    let shouldExclude = 
                         match excludeShip with
-                        | Some(excludedShip) when ship.Name = excludedShip.Name -> acc
-                        | _ -> ship :: acc
-                    else acc
+                        | Some(excludedShip) -> name = excludedShip.Name
+                        | None -> false
+                    
+                    if shouldExclude || List.contains name acc then acc
+                    else name :: acc
                 | _ -> acc
             ) [] grid
         
-        // Vérifie si la coordonnée est dans le périmètre d'un de ces bateaux
-        List.exists (fun ship ->
-            let perimeter = Ship.getPerimeter ship dims
-            List.contains coord perimeter
-        ) ships
+        // Pour chaque bateau, reconstruit ses coordonnées et calcule son périmètre
+        List.exists (fun shipName ->
+            let shipCoords = 
+                Grid.fold (fun coordAcc coord2 sector2 ->
+                    match sector2 with
+                    | Active(name2, index) when name2 = shipName -> (coord2, index) :: coordAcc
+                    | _ -> coordAcc
+                ) [] grid
+                |> List.sortBy snd
+                |> List.map fst
+            
+            if List.length shipCoords > 0 then
+                // Crée un bateau temporaire pour calculer le périmètre
+                let size = List.length shipCoords
+                let centerIndex = Ship.getCenterIndex size
+                let center = List.item centerIndex shipCoords
+                let direction = 
+                    if size > 1 then
+                        let first = List.head shipCoords
+                        let second = List.item 1 shipCoords
+                        let (di, dj) = Ship.addCoords second (Ship.multiplyCoord first (-1))
+                        if di = 0 && dj = 1 then East
+                        elif di = 0 && dj = -1 then West
+                        elif di = 1 && dj = 0 then South
+                        else North
+                    else North
+                
+                let tempShip = { Coords = shipCoords; Center = center; Facing = direction; Name = shipName }
+                let perimeter = Ship.getPerimeter tempShip dims
+                List.contains coord perimeter
+            else false
+        ) shipNames
 
     (* --- Nouvelles fonctions --- *)
 
@@ -94,14 +98,14 @@ module Navigation =
         let offset = Ship.getDirectionOffset direction
         let newCoords = List.map (Ship.addCoords offset) ship.Coords
         
-        // Vérifie toutes les conditions pour les nouvelles coordonnées
+        // Vérifie seulement les conditions de base pour déboguer
         List.forall (fun coord ->
             // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau
-            not (isCoordOccupied coord grid) &&
-            // 3. Pas dans le périmètre d'un autre bateau (excluant le bateau actuel)
-            not (isCoordInPerimeter coord (Some ship) grid)
+            // 2. Pas occupé par un autre bateau (en excluant le bateau actuel)
+            match Grid.get coord grid with
+            | Some(Active(name, _)) -> name = ship.Name  // Permet si c'est le même bateau
+            | _ -> true  // Clear ou None = OK
         ) newCoords
 
     let move (ship: Ship) (direction: Direction) : Ship =
