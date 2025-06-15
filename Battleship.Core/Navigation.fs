@@ -119,14 +119,14 @@ module Navigation =
         let dims = Grid.getDimensions grid
         let newShip = Ship.createShip ship.Center direction ship.Name
         
-        // Vérifie toutes les conditions pour les nouvelles coordonnées
+        // Vérifie seulement les conditions de base pour déboguer
         List.forall (fun coord ->
             // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau
-            not (isCoordOccupied coord grid) &&
-            // 3. Pas dans le périmètre d'un autre bateau (excluant le bateau actuel)
-            not (isCoordInPerimeter coord (Some ship) grid)
+            // 2. Pas occupé par un autre bateau (en excluant le bateau actuel)
+            match Grid.get coord grid with
+            | Some(Active(name, _)) -> name = ship.Name  // Permet si c'est le même bateau
+            | _ -> true  // Clear ou None = OK
         ) newShip.Coords
 
     let rotate (ship: Ship) (direction: Direction) : Ship =
