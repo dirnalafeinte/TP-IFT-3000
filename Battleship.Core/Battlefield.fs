@@ -6,8 +6,6 @@ module Battlefield =
     open Navigation
 
     type Data = { Dims: Dims; Ships: Ship list }
-
-    (* Fonctions helper *)
     
     // Trouve la direction d'un bateau à partir de ses coordonnées
     let findShipDirection (coords: Coord list) : Direction =

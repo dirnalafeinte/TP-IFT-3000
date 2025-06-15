@@ -18,8 +18,6 @@ module Ship =
         | West
 
     type Ship = {Coords: Coord list; Center: Coord; Facing: Direction; Name: Name}
-
-    (* Fonctions helper *)
     
     // Obtient la taille d'un bateau selon sa classe
     let getShipSize (name: Name) : int =

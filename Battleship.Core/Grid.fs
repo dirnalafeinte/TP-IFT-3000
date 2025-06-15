@@ -6,7 +6,6 @@ module Grid =
     type Coord = int * int
     type 'a Grid = Empty | Row of 'a list * 'a Grid
 
-    (* Fonction helper pour List *)
     module ListHelpers =
         let rec foldi (f: int -> 'acc -> 'a -> 'acc) (acc: 'acc) (list: 'a list) : 'acc =
             let rec foldAux index acc items =
@@ -17,7 +16,6 @@ module Grid =
                     foldAux (index + 1) newAcc tail
             foldAux 0 acc list
 
-    (* Fonctions d'ordre supérieur pour manipuler la grille *)
     
     // Crée une grille avec des dimensions spécifiées, remplie avec une valeur par défaut
     let rec create (rows: int) (cols: int) (defaultValue: 'a) : 'a Grid =

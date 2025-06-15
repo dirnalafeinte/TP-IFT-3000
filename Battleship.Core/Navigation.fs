@@ -17,19 +17,14 @@ module Navigation =
         | North -> 180
         | East -> 270
 
-    (* Fonctions helper *)
-    
-    // Vérifie si une coordonnée est occupée par un bateau dans la grille
     let isCoordOccupied (coord: Coord) (grid: Sector Grid) : bool =
         match Grid.get coord grid with
         | Some(Active(_, _)) -> true
         | _ -> false
     
-    // Vérifie si une coordonnée fait partie du périmètre d'autres bateaux
     let isCoordInPerimeter (coord: Coord) (excludeShip: Ship option) (grid: Sector Grid) : bool =
         let dims = Grid.getDimensions grid
         
-        // Collecte tous les noms de bateaux uniques (sauf celui exclu)
         let shipNames = 
             Grid.fold (fun acc shipCoord sector ->
                 match sector with
@@ -44,7 +39,6 @@ module Navigation =
                 | _ -> acc
             ) [] grid
         
-        // Pour chaque bateau, reconstruit ses coordonnées et calcule son périmètre
         List.exists (fun shipName ->
             let shipCoords = 
                 Grid.fold (fun coordAcc coord2 sector2 ->
@@ -56,7 +50,6 @@ module Navigation =
                 |> List.map fst
             
             if List.length shipCoords > 0 then
-                // Crée un bateau temporaire pour calculer le périmètre
                 let size = List.length shipCoords
                 let centerIndex = Ship.getCenterIndex size
                 let center = List.item centerIndex shipCoords
@@ -77,19 +70,14 @@ module Navigation =
             else false
         ) shipNames
 
-    (* --- Nouvelles fonctions --- *)
 
     let canPlace (center: Coord) (direction: Direction) (name: Name) (grid: Sector Grid) : bool =
         let dims = Grid.getDimensions grid
         let ship = Ship.createShip center direction name
         
-        // Vérifie toutes les conditions
         List.forall (fun coord ->
-            // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau
             not (isCoordOccupied coord grid) &&
-            // 3. Pas dans le périmètre d'un autre bateau
             not (isCoordInPerimeter coord None grid)
         ) ship.Coords
 
@@ -98,14 +86,11 @@ module Navigation =
         let offset = Ship.getDirectionOffset direction
         let newCoords = List.map (Ship.addCoords offset) ship.Coords
         
-        // Vérifie seulement les conditions de base pour déboguer
         List.forall (fun coord ->
-            // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau (en excluant le bateau actuel)
             match Grid.get coord grid with
-            | Some(Active(name, _)) -> name = ship.Name  // Permet si c'est le même bateau
-            | _ -> true  // Clear ou None = OK
+            | Some(Active(name, _)) -> name = ship.Name
+            | _ -> true
         ) newCoords
 
     let move (ship: Ship) (direction: Direction) : Ship =
@@ -119,14 +104,11 @@ module Navigation =
         let dims = Grid.getDimensions grid
         let newShip = Ship.createShip ship.Center direction ship.Name
         
-        // Vérifie seulement les conditions de base pour déboguer
         List.forall (fun coord ->
-            // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau (en excluant le bateau actuel)
             match Grid.get coord grid with
-            | Some(Active(name, _)) -> name = ship.Name  // Permet si c'est le même bateau
-            | _ -> true  // Clear ou None = OK
+            | Some(Active(name, _)) -> name = ship.Name
+            | _ -> true
         ) newShip.Coords
 
     let rotate (ship: Ship) (direction: Direction) : Ship =
@@ -137,25 +119,21 @@ module Navigation =
         let offset = Ship.getDirectionOffset ship.Facing
         let newCoords = List.map (Ship.addCoords offset) ship.Coords
         
-        // Debug: vérifions chaque coordonnée
         let results = 
             List.map (fun coord ->
                 let inBounds = Grid.isInBounds coord dims
                 let occupied = 
                     match Grid.get coord grid with
-                    | Some(Active(name, _)) -> name <> ship.Name  // Occupé si différent bateau
-                    | _ -> false  // Clear ou None = pas occupé
+                    | Some(Active(name, _)) -> name <> ship.Name
+                    | _ -> false 
                 (coord, inBounds, occupied)
             ) newCoords
         
-        // Pendant le jeu, ignore les périmètres - vérifie seulement les limites et occupations
         List.forall (fun coord ->
-            // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau
             match Grid.get coord grid with
-            | Some(Active(name, _)) -> name = ship.Name  // OK si c'est le même bateau
-            | _ -> true  // Clear ou None = OK
+            | Some(Active(name, _)) -> name = ship.Name
+            | _ -> true
         ) newCoords
 
     let moveForward (ship: Ship) : Ship =
@@ -183,11 +161,8 @@ module Navigation =
         let offset = Ship.getDirectionOffset newDirection
         let finalCoords = List.map (Ship.addCoords offset) rotatedShip.Coords
         
-        // Pendant le jeu, ignore les périmètres - vérifie seulement les limites et occupations
         List.forall (fun coord ->
-            // 1. Dans les limites de la grille
             Grid.isInBounds coord dims &&
-            // 2. Pas occupé par un autre bateau
             not (isCoordOccupied coord grid)
         ) finalCoords
 
